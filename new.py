@@ -9,9 +9,10 @@ from webdriver_manager.chrome import ChromeDriverManager
 from PIL import Image
 import pytesseract
 
-# Set the path to Tesseract executable
+# Set the path to Tesseract executable for Windows only
 if platform.system() == 'Windows':
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Adjust if needed
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
 
 def capture_screenshot(username):
     options = Options()
