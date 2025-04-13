@@ -8,9 +8,10 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from PIL import Image
 import pytesseract
+import platform
 
-# Set the path to Tesseract executable for Windows only
-if platform.system() == 'Windows':
+# Set path to Tesseract for Windows, otherwise skip
+if platform.system().lower() == 'windows':
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 
