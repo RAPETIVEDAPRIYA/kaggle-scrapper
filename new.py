@@ -17,15 +17,23 @@ if platform.system().lower() == 'windows':
 
 def capture_screenshot(username):
     options = Options()
+    options.binary_location = "/usr/bin/chromium"
     options.add_argument("--headless")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
+    options.add_argument("--window-size=1920,1080")
 
     if platform.system() != 'Windows':
         options.binary_location = "/usr/bin/chromium"
         
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+
+    # Manually point to the correct chromedriver path
+    # Use apt-installed chromedriver (works in most Linux/Streamlit setups)
+    driver = webdriver.Chrome(options=options)
+
 
     try:
         profile_url = f"https://www.kaggle.com/{username}/competitions"
