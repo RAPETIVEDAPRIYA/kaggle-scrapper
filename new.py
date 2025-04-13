@@ -10,7 +10,8 @@ from PIL import Image
 import pytesseract
 
 # Set the path to Tesseract executable
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Adjust if needed
+if platform.system() == 'Windows':
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Adjust if needed
 
 def capture_screenshot(username):
     options = Options()
@@ -18,6 +19,9 @@ def capture_screenshot(username):
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
 
+    if platform.system() != 'Windows':
+        options.binary_location = "/usr/bin/chromium"
+        
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
 
