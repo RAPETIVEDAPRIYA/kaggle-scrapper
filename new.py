@@ -2,18 +2,21 @@ import time
 import re
 import json
 import platform
-import streamlit as st
+import pytesseract
+from PIL import Image
+from fastapi import FastAPI, HTTPException, Response
+from fastapi.responses import FileResponse
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from PIL import Image
-import pytesseract
 
-# Optional: set path for Windows Tesseract
+app = FastAPI()
+
+# Tesseract path for Windows
 if platform.system().lower() == 'windows':
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 
-def capture_screenshot(username):
+def capture_screenshot(username: str) -> str:
     options = Options()
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
@@ -22,12 +25,10 @@ def capture_screenshot(username):
     options.add_argument("--window-size=1920,1080")
 
     driver = webdriver.Chrome(options=options)
-
     try:
         profile_url = f"https://www.kaggle.com/{username}/competitions"
         driver.get(profile_url)
-        time.sleep(5)  # let the page load
-
+        time.sleep(5)
         screenshot_path = "kaggle_screenshot.png"
         driver.save_screenshot(screenshot_path)
         return screenshot_path
@@ -35,22 +36,13 @@ def capture_screenshot(username):
         driver.quit()
 
 
-def extract_activity_from_image(image_path):
+def extract_activity_from_image(image_path: str) -> dict:
     image = Image.open(image_path)
-
-    # Crop region covering Activity section (adjusted from screenshot)
     width, height = image.size
     crop_box = (int(width * 0.72), int(height * 0.48), int(width * 0.95), int(height * 0.75))
     cropped_image = image.crop(crop_box)
-
-    # Optional: for debugging
-    # cropped_image.show()
-
-    # OCR
     text = pytesseract.image_to_string(cropped_image)
-    print("🔍 OCR Text:\n", text)
 
-    # Extract numbers
     solo = re.search(r'(\d+)\s+competitions\s+solo', text)
     team = re.search(r'(\d+)\s+competitions\s+in\s+a\s+team', text)
     hosted = re.search(r'(\d+)\s+competitions\s+hosted', text)
@@ -62,40 +54,26 @@ def extract_activity_from_image(image_path):
     }
 
 
-# ----------- Streamlit UI ------------
-
-def main():
-    st.title("🧠 Kaggle Competition Activity Extractor")
-
-    username = st.text_input("Enter your Kaggle Username (e.g., vedapr471):")
-
-    if username:
-        st.info(f"Fetching activity data for user: {username}")
+@app.get("/download-activity/{username}")
+def download_kaggle_activity(username: str):
+    try:
         screenshot_path = capture_screenshot(username)
         activity = extract_activity_from_image(screenshot_path)
 
-        st.success("✅ Activity Data Extracted:")
-        st.write(f"- 🏁 Competitions Solo: {activity['competitions_solo']}")
-        st.write(f"- 👥 Competitions in a Team: {activity['competitions_team']}")
-        st.write(f"- 🛠 Competitions Hosted: {activity['competitions_hosted']}")
-
-        # Download JSON
-        output_json = {
+        data = {
             "username": username,
-            "competitions_solo": activity["competitions_solo"],
-            "competitions_team": activity["competitions_team"],
-            "competitions_hosted": activity["competitions_hosted"]
+            **activity
         }
 
-        st.download_button(
-            label="📥 Download JSON",
-            data=json.dumps(output_json, indent=4),
-            file_name=f"{username}_activity.json",
-            mime="application/json"
+        json_path = f"{username}_activity.json"
+        with open(json_path, "w") as f:
+            json.dump(data, f, indent=4)
+
+        return FileResponse(
+            path=json_path,
+            filename=json_path,
+            media_type="application/json"
         )
-    else:
-        st.warning("Please enter a Kaggle username.")
 
-
-if __name__ == "__main__":
-    main()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
